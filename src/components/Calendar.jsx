@@ -1,68 +1,75 @@
-import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
-import "./Calendar.css";
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import './Calendar.css';
 
 function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [years, setYears] = useState([]);
-  const [weekends, setWeekends] = useState([]);
-  const [elements, setElements] = useState([]);
   const [currentYear, setCurrentYear] = useState(2023);
-  const [newYear, setNewYear] = useState("");
-  console.log(elements);
+  const [newYear, setNewYear] = useState('');
+
+  const [weekends, setWeekends] = useState([]);
+  const [arr, setArr] = useState([]);
+  const [ids, setIds] = useState([]);
+  console.log(weekends);
 
   const getYears = async () => {
-    let res = await axios("http://localhost:8000/years");
+    let res = await axios('http://localhost:8000/years');
     setYears(res.data);
   };
 
-  const addWeekend = (e) => {
-    e.target.setAttribute("id", String(currentDate));
-    let obj = {
-      date: String(currentDate),
-      isWeekend: true,
-    };
-    axios.post("http://localhost:8000/weekends", obj);
+  const toggleWeekend = (e) => {
+    console.log(e.target.style.color);
+    if (e.target.className.includes('weekend')) {
+      deleteWeekend(e);
+    } else {
+      addWeekend(e);
+    }
   };
 
-  const getWeekend = async () => {
-    try {
-      const response = await axios.get("http://localhost:8000/weekends");
-      const weekends = response.data;
-      setWeekends(weekends);
+  async function addWeekend(e) {
+    e.target.classList.add('weekend');
+    let obj = {
+      idWeekend: e.target.id,
+      id: e.target.id,
+    };
+    await axios.post('http://localhost:8000/weekends', obj);
+  }
 
-      let tds = document.querySelectorAll("td");
-      setElements(tds);
-      elements.forEach((item) => {
-        console.log(item.id);
-      });
-    } catch (error) {
-      console.error(error);
-    }
+  async function deleteWeekend(e) {
+    console.log(e.target.id);
+    e.target.classList.remove('weekend');
+    e.target.classList.add('active');
+    await axios.delete(`http://localhost:8000/weekends/${e.target.id}`);
+  }
+
+  const getWeekends = async () => {
+    let res = await axios('http://localhost:8000/weekends');
+    setWeekends(res.data);
   };
 
   useEffect(() => {
     getYears();
-    getWeekend();
+    getWeekends();
   }, []);
 
   const createCalendar = () => {
     const months = [
-      "Январь",
-      "Февраль",
-      "Март",
-      "Апрель",
-      "Май",
-      "Июнь",
-      "Июль",
-      "Август",
-      "Сентябрь",
-      "Октябрь",
-      "Ноябрь",
-      "Декабрь",
+      'Январь',
+      'Февраль',
+      'Март',
+      'Апрель',
+      'Май',
+      'Июнь',
+      'Июль',
+      'Август',
+      'Сентябрь',
+      'Октябрь',
+      'Ноябрь',
+      'Декабрь',
     ];
 
-    const daysOfWeek = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"];
+    const daysOfWeek = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 
     const calendar = [];
 
@@ -79,6 +86,7 @@ function Calendar() {
           <td
             className="inactive"
             key={`${currentYear}-${index}-empty-${i}`}
+            id={`${currentYear}-${index}-empty-${i}`}
           ></td>
         );
       }
@@ -86,17 +94,31 @@ function Calendar() {
       for (let day = 1; day <= numDaysInMonth; day++) {
         const currentDate = new Date(currentYear, index, day);
 
-        let className = "active";
+        let className = 'active';
+
         if (currentDate.getDay() >= 5) {
-          className = "weekend";
+          className = 'weekend';
+        }
+
+        for (let day of weekends) {
+          arr.push(day.idWeekend);
+        }
+
+        for (let day of weekends) {
+          ids.push(day.id);
         }
 
         week.push(
           <td
-            className={className}
+            className={
+              arr.includes(`${currentYear}-${index}-${day}`)
+                ? 'weekend'
+                : className
+            }
             key={`${currentYear}-${index}-${day}`}
+            id={`${currentYear}-${index}-${day}`}
             onClick={(e) => {
-              addWeekend(e);
+              toggleWeekend(e);
             }}
           >
             {day}
@@ -132,18 +154,11 @@ function Calendar() {
       );
     });
 
-    async function addCalendar(calendar) {
-      let obj = {
-        calendar,
-      };
-      await axios.post("http://localhost:8000/calendar", obj);
-    }
-    addCalendar(calendar);
     return calendar;
   };
 
   const handlePrevYearClick = () => {
-    console.log("work");
+    console.log('work');
     if (years && years.length > 0) {
       const index = years.findIndex((item) => item.year === currentYear - 1);
       console.log(index);
@@ -166,14 +181,14 @@ function Calendar() {
 
   const handleAddYearClick = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/years");
+      const response = await axios.get('http://localhost:8000/years');
       const years = response.data.years;
       const maxId = Math.max(...(years || []).map((year) => year.id));
-      const result = await axios.post("http://localhost:8000/years", {
+      const result = await axios.post('http://localhost:8000/years', {
         id: maxId + 1,
         year: parseInt(newYear),
       });
-      setNewYear("");
+      setNewYear('');
       setYears(result.data.years || []);
     } catch (error) {
       console.error(error);
@@ -193,9 +208,9 @@ function Calendar() {
         <button onClick={handleAddYearClick}>Добавить</button>
       </div>
       <div className="calendar-header">
-        <button onClick={handlePrevYearClick}>{"<"}</button>
+        <button onClick={handlePrevYearClick}>{'<'}</button>
         <h2>{currentYear}</h2>
-        <button onClick={handleNextYearClick}>{">"}</button>
+        <button onClick={handleNextYearClick}>{'>'}</button>
       </div>
       <div className="calendar-body">{createCalendar()}</div>
     </div>
